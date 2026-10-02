@@ -1,0 +1,23 @@
+{
+  "name": "Meu Centro de Controle",
+  "short_name": "Meu Centro",
+  "description": "Controle financeiro e pessoal — contas, receitas, metas, agenda",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Nova conta", "short_name": "Conta", "url": "./index.html?action=novaconta", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Adição rápida", "short_name": "Adicionar", "url": "./index.html?action=add", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Situação de hoje", "short_name": "Hoje", "url": "./index.html?action=hoje", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Agenda", "short_name": "Agenda", "url": "./index.html?action=agenda", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}

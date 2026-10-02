@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Meu Centro de Controle</title>
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Meu Centro" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; color: #e5e5e5;
+      font-family: Inter, -apple-system, system-ui, sans-serif; overflow: hidden; }
+    #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #0a0a0a; }
+    /* Tela de carregamento / offline */
+    #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 14px; background: #0a0a0a; z-index: 10; transition: opacity 0.4s; }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    #splash img { width: 88px; height: 88px; border-radius: 22px; }
+    #splash .t { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: #fafafa; }
+    #splash .s { font-size: 12.5px; color: #737373; }
+    #splash .spin { width: 22px; height: 22px; border: 2px solid rgba(212,175,55,0.25);
+      border-top-color: #d4af37; border-radius: 50%; animation: sp 0.8s linear infinite; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    #offline { display: none; text-align: center; padding: 0 28px; }
+    #offline.show { display: block; }
+    #offline button { margin-top: 12px; background: #d4af37; color: #0a0a0a; border: 0; border-radius: 10px;
+      padding: 10px 18px; font-weight: 700; font-size: 14px; cursor: pointer; }
+    /* Banner "instalar" */
+    #installBar { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+      background: #161616; border: 1px solid rgba(212,175,55,0.45); border-radius: 14px; padding: 12px 14px;
+      display: none; align-items: center; gap: 12px; z-index: 20; box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+      font-size: 13px; }
+    #installBar.show { display: flex; }
+    #installBar img { width: 36px; height: 36px; border-radius: 9px; }
+    #installBar .txt { flex: 1; }
+    #installBar .txt b { display: block; color: #fafafa; }
+    #installBar .txt span { color: #a3a3a3; font-size: 12px; }
+    #installBar button { border: 0; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 13px; }
+    #installBar .ok { background: #d4af37; color: #0a0a0a; }
+    #installBar .no { background: transparent; color: #737373; }
+    #setup { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px;
+      background: #0a0a0a; z-index: 30; text-align: center; line-height: 1.6; }
+    #setup.show { display: flex; }
+    #setup code { background: #1c1c1c; padding: 2px 6px; border-radius: 6px; color: #e8c252; }
+    /* Tela de digital (bloqueio) e confirmação de registro */
+    #lock, #regBio { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 28px; text-align: center; background: #0a0a0a; z-index: 40; }
+    #regBio { z-index: 45; background: rgba(10,10,10,0.94); }
+    #lock.show, #regBio.show { display: flex; }
+    #lock img { width: 88px; height: 88px; border-radius: 22px; }
+    #lock .t, #regBio .t { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: #fafafa; }
+    #lock .s, #regBio .s { font-size: 13.5px; color: #a3a3a3; max-width: 320px; line-height: 1.55; min-height: 21px; }
+    .bio-ic { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 38px;
+      background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.35); color: #d4af37; }
+    .btn-ouro { background: #d4af37; color: #0a0a0a; border: 0; border-radius: 12px; padding: 13px 22px; font-weight: 700; font-size: 15px; cursor: pointer; min-width: 220px; }
+    .btn-ouro:active { transform: scale(0.98); }
+    .btn-link { background: transparent; border: 0; color: #a3a3a3; font-size: 13.5px; cursor: pointer; padding: 10px; text-decoration: underline; }
+    #setup input { width: 100%; box-sizing: border-box; margin-top: 14px; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #141414; color: #fafafa; font-size: 14px; }
+    #setup .err { color: #f87171; font-size: 13px; min-height: 20px; margin-top: 8px; }
+    #setup button { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <!-- ===================================================================
+       CONFIGURAÇÃO: cole aqui a URL /exec do seu Apps Script
+       =================================================================== -->
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyb2h9gcEzroBLGcHjz-7l6Ti9bQ6xrohO-L4wD_7U54XCJaOGt7yUX6n_ava8ZFHA/exec';
+  </script>
+
+  <div id="splash">
+    <img src="./icon-192.png" alt="" />
+    <div class="t">Meu Centro de Controle</div>
+    <div class="s" id="splashMsg">Carregando…</div>
+    <div class="spin" id="spin"></div>
+    <div id="offline">
+      <div style="color:#fafafa;font-weight:600">Você está sem conexão</div>
+      <div style="color:#a3a3a3;font-size:13px;margin-top:4px">O app precisa de internet para acessar seus dados.</div>
+      <button onclick="location.reload()">Tentar de novo</button>
+    </div>
+  </div>
+
+  <div id="setup">
+    <div style="max-width:420px;width:100%">
+      <div style="font-size:20px;font-weight:700;color:#fafafa;margin-bottom:10px">Falta configurar a URL</div>
+      <div style="color:#a3a3a3;font-size:14px">Cole a URL do seu app (Apps Script → Implantar → Gerenciar implantações → URL que termina em <code>/exec</code>). Ela fica guardada só neste aparelho.</div>
+      <input id="setupUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" />
+      <div class="err" id="setupErr"></div>
+      <button class="btn-ouro" id="setupSalvar">Salvar e abrir</button>
+    </div>
+  </div>
+
+  <div id="lock" role="dialog" aria-modal="true" aria-labelledby="lockT">
+    <img src="./icon-192.png" alt="" />
+    <div class="t" id="lockT">Meu Centro de Controle</div>
+    <div class="s" id="lockMsg">Confirme com a sua digital para entrar.</div>
+    <button class="btn-ouro" id="lockBtn">☝ Entrar com a digital</button>
+    <button class="btn-link" id="lockSenha">Usar senha</button>
+  </div>
+
+  <div id="regBio" role="dialog" aria-modal="true" aria-labelledby="regT">
+    <div class="bio-ic" aria-hidden="true">☝</div>
+    <div class="t" id="regT">Ativar digital neste aparelho</div>
+    <div class="s" id="regMsg">Toque em Continuar e confirme com a sua digital. Nas próximas vezes, o app abrirá só com ela.</div>
+    <button class="btn-ouro" id="regOk">Continuar</button>
+    <button class="btn-link" id="regCancel">Cancelar</button>
+  </div>
+
+  <iframe id="app" title="Meu Centro de Controle" allow="clipboard-write; web-share"></iframe>
+
+  <div id="installBar">
+    <img src="./icon-192.png" alt="" />
+    <div class="txt"><b>Instalar Meu Centro</b><span>Abre em janela própria, com ícone na tela inicial</span></div>
+    <button class="no" onclick="dismissInstall()">Agora não</button>
+    <button class="ok" onclick="doInstall()">Instalar</button>
+  </div>
+
+  <script>
+    // ============================================================
+    // URL do app: a constante lá em cima OU a URL colada na tela de configuração (guardada neste aparelho)
+    // ============================================================
+    const RX_URL = /^https:\/\/script\.google\.com\/.+\/exec(\?.*)?$/;
+    function urlDoApp() {
+      if (RX_URL.test(APPS_SCRIPT_URL)) return APPS_SCRIPT_URL;
+      try { const s = localStorage.getItem('mcc_exec_url'); if (s && RX_URL.test(s)) return s; } catch (e) {}
+      return '';
+    }
+
+    // ============================================================
+    // ENTRAR COM A DIGITAL (aparelho confiável)
+    // O app (dentro da moldura) pede o registro; aqui a digital do aparelho é cadastrada (WebAuthn) e a chave
+    // recebida do servidor fica guardada. Nas próximas aberturas a chave só é entregue ao app depois que a
+    // digital (ou o bloqueio de tela) for confirmada. Fica 3 minutos em segundo plano → bloqueia de novo.
+    // ============================================================
+    const REG_KEY = 'mcc_bio_v1';
+    const LOCK_APOS_MS = 3 * 60 * 1000;
+    let BIO_OK = false, appCarregado = false, pend = null, pedindo = false, saiuEm = 0;
+
+    const $ = id => document.getElementById(id);
+    const aleatorio = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; };
+    const b64u = buf => btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const deB64u = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+    function lerReg() {
+      try { const r = JSON.parse(localStorage.getItem(REG_KEY) || 'null'); return (r && r.cred && r.did && r.token) ? r : null; } catch (e) { return null; }
+    }
+    function gravarReg(r) { try { localStorage.setItem(REG_KEY, JSON.stringify(r)); } catch (e) {} }
+    function limparReg() { try { localStorage.removeItem(REG_KEY); } catch (e) {} }
+    async function bioCheck() {
+      try { BIO_OK = !!(window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); }
+      catch (e) { BIO_OK = false; }
+    }
+
+    // ---- Carrega o app (repassa ?action= dos atalhos e informa ao app o estado da digital) ----
+    function montarUrl(extra) {
+      const u = new URL(urlDoApp());
+      const action = new URLSearchParams(location.search).get('action');
+      if (action) u.searchParams.set('action', action);
+      u.searchParams.set('pwa', '1');
+      u.searchParams.set('bio', BIO_OK ? '1' : '0');
+      const reg = lerReg(); if (reg) u.searchParams.set('did', reg.did);
+      u.searchParams.set('n', Date.now().toString(36) + Math.random().toString(36).slice(2, 6));   // identifica esta navegação
+      Object.keys(extra || {}).forEach(k => u.searchParams.set(k, extra[k]));
+      return u.toString();
+    }
+    function carregarApp(extra) {
+      if (!urlDoApp()) return mostrarSetup();
+      if (!navigator.onLine) { mostrarOffline(); return; }
+      appCarregado = true;
+      $('splashMsg').textContent = 'Carregando…'; $('splashMsg').style.display = ''; $('spin').style.display = ''; $('offline').classList.remove('show');
+      $('splash').classList.remove('hide');
+      const f = $('app'); let carregou = false;
+      const aoCarregar = () => { carregou = true; f.removeEventListener('load', aoCarregar); setTimeout(() => $('splash').classList.add('hide'), 250); };
+      f.addEventListener('load', aoCarregar);
+      f.src = montarUrl(extra);
+      setTimeout(() => { if (!carregou) $('splashMsg').textContent = 'Demorando mais que o normal…'; }, 8000);
+      setTimeout(() => { if (!carregou) mostrarOffline(); }, 25000);
+    }
+    function mostrarOffline() {
+      $('spin').style.display = 'none';
+      $('splashMsg').style.display = 'none';
+      $('offline').classList.add('show');
+      $('splash').classList.remove('hide');
+    }
+    function mostrarSetup() { $('setup').classList.add('show'); $('splash').classList.add('hide'); }
+    window.addEventListener('offline', () => { if (appCarregado) mostrarOffline(); });
+
+    // ---- tela de configuração da URL ----
+    $('setupSalvar').addEventListener('click', () => {
+      const v = $('setupUrl').value.trim();
+      if (!RX_URL.test(v)) { $('setupErr').textContent = 'Essa URL não parece a do app. Ela deve começar com https://script.google.com e terminar em /exec.'; return; }
+      try { localStorage.setItem('mcc_exec_url', v); } catch (e) {}
+      $('setup').classList.remove('show'); $('splash').classList.remove('hide');
+      iniciar();
+    });
+
+    // ---- bloqueio por digital ----
+    function mostrarLock(msg) { $('lockMsg').textContent = msg || 'Confirme com a sua digital para entrar.'; $('lock').classList.add('show'); }
+    function esconderLock() { $('lock').classList.remove('show'); }
+    function erroAmigavel(e) {
+      return (e && e.name === 'NotAllowedError')
+        ? 'Não foi possível confirmar. Toque no botão para tentar de novo.'
+        : 'A digital não está disponível agora. Toque em "Usar senha".';
+    }
+    async function desbloquear() {
+      const reg = lerReg(); if (!reg || pedindo) return;
+      pedindo = true; $('lockMsg').textContent = 'Aguardando a sua digital…';
+      try {
+        const cred = await navigator.credentials.get({ publicKey: {
+          challenge: aleatorio(32), rpId: location.hostname, timeout: 60000, userVerification: 'required',
+          allowCredentials: [{ type: 'public-key', id: deB64u(reg.cred), transports: ['internal'] }]
+        } });
+        if (!cred) throw new Error('vazio');
+        esconderLock();
+        if (!appCarregado) carregarApp({ dt: reg.token });      // primeira abertura: entrega a chave ao app
+      } catch (e) { $('lockMsg').textContent = erroAmigavel(e); }
+      finally { pedindo = false; }
+    }
+    $('lockBtn').addEventListener('click', desbloquear);
+    $('lockSenha').addEventListener('click', () => { esconderLock(); carregarApp({ sair: '1' }); });   // app encerra a sessão e pede a senha
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { saiuEm = Date.now(); return; }
+      if (saiuEm && lerReg() && appCarregado && Date.now() - saiuEm > LOCK_APOS_MS) { mostrarLock(); desbloquear(); }
+    });
+
+    // ---- registro da digital (pedido pelo app em Configurações → Segurança) ----
+    const origemConfiavel = o => o === 'https://script.google.com' || /^https:\/\/([a-z0-9-]+\.)*googleusercontent\.com$/.test(o);
+    window.addEventListener('message', ev => {
+      if (!origemConfiavel(ev.origin)) return;
+      const m = ev.data; if (!m || typeof m !== 'object') return;
+      if (m.mcc === 'bio-register') {
+        if (!/^D[0-9a-f]{10}$/.test(String(m.did)) || !/^[0-9a-f]{64}$/.test(String(m.token))) return;
+        pend = { did: m.did, token: m.token, nome: String(m.nome || '').slice(0, 40) };
+        $('regBio').classList.add('show');
+      } else if (m.mcc === 'bio-invalid' || m.mcc === 'bio-clear') limparReg();
+    });
+    function fecharRegistro() { $('regBio').classList.remove('show'); }
+    function falhaRegistro() {
+      const p = pend; pend = null; fecharRegistro();
+      if (p) carregarApp({ action: 'seguranca', rdid: p.did });      // o app remove o aparelho criado no servidor e avisa
+    }
+    $('regCancel').addEventListener('click', falhaRegistro);
+    $('regOk').addEventListener('click', async () => {
+      if (!pend) return;
+      try {
+        const cred = await navigator.credentials.create({ publicKey: {
+          challenge: aleatorio(32), rp: { name: 'Meu Centro de Controle', id: location.hostname },
+          user: { id: aleatorio(16), name: 'meu-centro', displayName: pend.nome || 'Meu Centro' },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+          timeout: 60000, attestation: 'none'
+        } });
+        if (!cred) throw new Error('vazio');
+        const p = pend; pend = null;
+        gravarReg({ cred: b64u(cred.rawId), did: p.did, token: p.token, nome: p.nome });
+        fecharRegistro();
+        carregarApp({ action: 'seguranca', biook: '1', dt: p.token });    // reabre já autenticado e confirma "Digital ativada"
+      } catch (e) { falhaRegistro(); }
+    });
+
+    // ---- início ----
+    async function iniciar() {
+      if (!urlDoApp()) return mostrarSetup();
+      if (!navigator.onLine) { mostrarOffline(); return; }
+      await bioCheck();
+      if (lerReg()) { mostrarLock(); desbloquear(); }
+      else carregarApp();
+    }
+    iniciar();
+
+    // ---- Service worker (permite "Instalar") ----
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // ---- Prompt de instalação (Android/Chrome/Edge) ----
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (localStorage.getItem('mcc_install_dismissed') !== '1') {
+        setTimeout(() => document.getElementById('installBar').classList.add('show'), 2500);
+      }
+    });
+    async function doInstall() {
+      document.getElementById('installBar').classList.remove('show');
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    }
+    function dismissInstall() {
+      localStorage.setItem('mcc_install_dismissed', '1');
+      document.getElementById('installBar').classList.remove('show');
+    }
+    window.addEventListener('appinstalled', () => { document.getElementById('installBar').classList.remove('show'); });
+  </script>
+</body>
+</html>
